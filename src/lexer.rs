@@ -8,6 +8,7 @@ pub struct Lexer<'a> {
 
 impl<'a> Lexer<'a> {
     pub fn new(data: &'a str) -> Self {
+        println!("{:?}", data);
         Lexer {
             token_iter: data.chars().peekable(),
         }
@@ -20,19 +21,21 @@ impl<'a> Lexer<'a> {
     fn lex_string(&mut self) -> String {
         let mut string_value = String::new();
         while let Some(value) = self.clone().token_iter.peek() {
+            println!("{:?}", value);
             match *value {
-                '"' => return string_value,
                 '\\' => match self.advance() {
                     Some('n') => string_value.push('\n'),
                     Some('r') => string_value.push('\r'),
                     Some('t') => string_value.push('\t'),
                     Some('\\') => string_value.push('\\'),
-                    Some('"') => string_value.push('"'),
+                    Some('"') => {
+                        self.advance();
+                        break;
+                    }
                     _ => panic!("Invalid sequence character"),
                 },
-                _ => {}
+                val => string_value.push(val),
             }
-            string_value.push(*value);
             self.advance();
         }
         string_value
