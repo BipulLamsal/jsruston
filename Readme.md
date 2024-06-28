@@ -32,14 +32,15 @@ fn index(&self, index: usize) -> Result<&JsonValue, ParsedJsonError>
 ```
 
 ### Todo
-[ ] Serialization and Deserialization
-[ ] Redefine number type in JsonValue (currently directly converts to f64)
-[ ] Robus error handling (currently panics overloding indexing with [] for errors)
-[ ] Prettify output
-[ ] Add more test cases
+
+- [ ] Serialization and Deserialization
+- [ ] Redefine number type in JsonValue (currently directly converts to f64)
+- [ ] Robus error handling (currently panics overloding indexing with [] for errors)
+- [ ] Prettify output
+- [ ] Add more test cases
 
 
 ### Resources
-[RFC8259](https://datatracker.ietf.org/doc/html/rfc8259)
-[Astexplorer](https://astexplorer.net/)
+- [RFC8259](https://datatracker.ietf.org/doc/html/rfc8259)
+- [Astexplorer](https://astexplorer.net/)
 
