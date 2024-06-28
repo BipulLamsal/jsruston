@@ -2,7 +2,7 @@ use crate::token::Token;
 use core::panic;
 use std::{iter::Peekable, vec::IntoIter};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum JsonValue {
     Object(Vec<(String, JsonValue)>),
     Array(Vec<JsonValue>),
@@ -11,6 +11,7 @@ pub enum JsonValue {
     Boolean(bool),
     Null,
 }
+#[derive(Debug, Clone)]
 pub struct Parser {
     tokens: Peekable<IntoIter<Token>>,
 }
@@ -44,6 +45,7 @@ impl Parser {
             Some(Token::ValueNumber(val)) => JsonValue::Number(*val),
             Some(Token::ValueBoolean(val)) => JsonValue::Boolean(*val),
             Some(Token::ValueNil) => JsonValue::Null,
+
             _ => {
                 panic!("Parser Error: Unexpected token")
             }
@@ -59,10 +61,12 @@ impl Parser {
                 self.expect_token(Token::NameSeperator);
                 let value = self.parse_value();
                 object.push((key, value));
-                self.expect_token(Token::ValueSeperator);
+                self.consume();
+                if self.current() == Some(&Token::ValueSeperator) {
+                    self.consume();
+                }
             }
         }
-        self.consume();
         JsonValue::Object(object)
     }
 
@@ -72,9 +76,11 @@ impl Parser {
         while self.current() != Some(&Token::EndArray) {
             let value = self.parse_value();
             array.push(value);
-            self.expect_token(Token::ValueSeperator);
+            self.consume();
+            if self.current() == Some(&Token::ValueSeperator) {
+                self.consume();
+            }
         }
-        self.consume();
         JsonValue::Array(array)
     }
 

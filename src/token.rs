@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Token {
     BeginArray,     // [
     BeginObject,    // {

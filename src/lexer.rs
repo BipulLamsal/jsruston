@@ -21,16 +21,19 @@ impl<'a> Lexer<'a> {
         let mut string_value = String::new();
         while let Some(value) = self.token_iter.peek() {
             match *value {
-                '\\' => match self.advance() {
-                    Some('n') => string_value.push('\n'),
-                    Some('r') => string_value.push('\r'),
-                    Some('t') => string_value.push('\t'),
-                    Some('\\') => string_value.push('\\'),
-                    Some('"') => {
-                        string_value.push('\"');
+                '\\' => {
+                    self.advance();
+                    match self.advance() {
+                        Some('n') => string_value.push('\n'),
+                        Some('r') => string_value.push('\r'),
+                        Some('t') => string_value.push('\t'),
+                        Some('\\') => string_value.push('\\'),
+                        Some('"') => {
+                            string_value.push('\"');
+                        }
+                        _ => panic!("Lexer Error: Invalid sequence character"),
                     }
-                    _ => panic!("Lexer Error: Invalid sequence character"),
-                },
+                }
                 '"' => {
                     self.advance();
                     break;
