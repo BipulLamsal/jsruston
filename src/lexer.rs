@@ -1,4 +1,4 @@
-use crate::token::Token;
+use crate::{error::LexerError, token::Token};
 use std::{iter, str::Chars};
 
 #[derive(Clone)]
@@ -17,7 +17,7 @@ impl<'a> Lexer<'a> {
         self.token_iter.next()
     }
 
-    fn lex_string(&mut self) -> String {
+    fn lex_string(&mut self) -> Result<String, LexerError> {
         let mut string_value = String::new();
         while let Some(value) = self.token_iter.peek() {
             match *value {
@@ -31,7 +31,7 @@ impl<'a> Lexer<'a> {
                         Some('"') => {
                             string_value.push('\"');
                         }
-                        _ => panic!("Lexer Error: Invalid sequence character"),
+                        ch => return Err(LexerError::InvalidEscapeSquence(ch.unwrap_or(' '))),
                     }
                 }
                 '"' => {
@@ -44,10 +44,10 @@ impl<'a> Lexer<'a> {
                 }
             }
         }
-        string_value
+        Ok(string_value)
     }
 
-    fn lex_number(&mut self) -> String {
+    fn lex_number(&mut self) -> Result<String, LexerError> {
         let mut number_value = String::new();
         while let Some(value) = self.token_iter.peek() {
             match *value {
@@ -55,13 +55,13 @@ impl<'a> Lexer<'a> {
                     number_value.push(*value);
                     self.advance();
                 }
-                _ => return number_value,
+                _ => return Ok(number_value),
             }
         }
-        number_value
+        Ok(number_value)
     }
 
-    fn lex_boolean(&mut self) -> bool {
+    fn lex_boolean(&mut self) -> Result<bool, LexerError> {
         let mut boolean_value = String::new();
         while let Some(value) = self.token_iter.peek() {
             match *value {
@@ -93,23 +93,20 @@ impl<'a> Lexer<'a> {
                         }
                     }
                 }
-                _ => panic!("Lexer Error: Unusual sequence of character"),
+                ch => return Err(LexerError::UnexpectedCharacter(ch)),
             }
             if boolean_value.as_str().contains("false") {
-                return false;
+                return Ok(false);
             } else if boolean_value.as_str().contains("true") {
-                return true;
+                return Ok(true);
             } else {
-                panic!(
-                    "Lexer Error: Unusual sequence of characters {}",
-                    boolean_value
-                );
+                return Err(LexerError::InvalidValue(boolean_value));
             }
         }
-        return false;
+        return Err(LexerError::InvalidValue(boolean_value));
     }
 
-    fn lex_null(&mut self) -> Token {
+    fn lex_null(&mut self) -> Result<Token, LexerError> {
         let mut null_value = String::new();
         let mut counter = 1;
         while counter <= 4 {
@@ -124,13 +121,13 @@ impl<'a> Lexer<'a> {
             }
         }
         if null_value.contains("null") {
-            return Token::ValueNil;
+            return Ok(Token::ValueNil);
         } else {
-            panic!("Lexer Error: Unusual Squence of characters {}", null_value);
+            return Err(LexerError::InvalidValue(null_value));
         }
     }
 
-    pub fn lex(&mut self) -> Vec<Token> {
+    pub fn lex(&mut self) -> Result<Vec<Token>, LexerError> {
         let mut tokens = Vec::new();
         while let Some(ch) = self.token_iter.peek() {
             match ch {
@@ -160,29 +157,32 @@ impl<'a> Lexer<'a> {
                 }
                 '"' => {
                     self.advance();
-                    let string_value = self.lex_string();
+                    let string_value = self.lex_string()?;
                     tokens.push(Token::ValueString(string_value));
                 }
                 '0'..='9' | '-' => {
-                    let number_value = self.lex_number();
+                    let number_value = self.lex_number()?;
                     tokens.push(Token::ValueNumber(number_value.parse().unwrap()));
                 }
                 't' | 'f' => {
-                    let boolean_value = self.lex_boolean();
+                    let boolean_value = self.lex_boolean()?;
                     tokens.push(Token::ValueBoolean(boolean_value));
                 }
                 'n' => {
-                    let null_value = self.lex_null();
+                    let null_value = self.lex_null()?;
                     tokens.push(null_value);
                 }
                 ' ' => {
                     self.advance();
                 }
+                '\n' => {
+                    self.advance();
+                }
                 val => {
-                    panic!("Lexer Error: Unusal sequence of character: {}", val);
+                    return Err(LexerError::UnexpectedCharacter(*val));
                 }
             }
         }
-        tokens
+        Ok(tokens)
     }
 }
