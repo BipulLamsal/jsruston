@@ -1,4 +1,8 @@
-use crate::{error::ParserError, token::Token};
+use crate::{
+    error::{ParsedJsonError, ParserError},
+    lexer::Lexer,
+    token::Token,
+};
 use std::{iter::Peekable, vec::IntoIter};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -12,58 +16,74 @@ pub enum JsonValue {
 }
 
 impl JsonValue {
-    pub fn get(&self, key: &str) -> Option<&JsonValue> {
+    pub fn get(&self, key: &str) -> Result<&JsonValue, ParsedJsonError> {
         if let JsonValue::Object(ref obj) = *self {
             for (k, v) in obj {
                 if k == key {
-                    return Some(v);
+                    return Ok(v);
                 }
             }
+            Err(ParsedJsonError::KeyNotFound(key.to_string()))
+        } else {
+            Err(ParsedJsonError::UnexpectedType)
         }
-        None
     }
 
-    pub fn get_string(&self) -> Option<&str> {
+    pub fn get_string(&self) -> Result<&str, ParsedJsonError> {
         if let JsonValue::String(ref s) = *self {
-            return Some(s);
+            return Ok(s);
         }
-        None
+        Err(ParsedJsonError::UnexpectedType)
     }
 
-    pub fn get_number(&self) -> Option<f64> {
+    pub fn get_number(&self) -> Result<f64, ParsedJsonError> {
         if let JsonValue::Number(n) = *self {
-            return Some(n);
+            return Ok(n);
         }
-        None
+        Err(ParsedJsonError::UnexpectedType)
     }
 
-    pub fn get_boolean(&self) -> Option<bool> {
+    pub fn get_boolean(&self) -> Result<bool, ParsedJsonError> {
         if let JsonValue::Boolean(b) = *self {
-            return Some(b);
+            return Ok(b);
         }
-        None
+        Err(ParsedJsonError::UnexpectedType)
     }
 
     pub fn is_null(&self) -> bool {
         matches!(*self, JsonValue::Null)
     }
 
-    pub fn get_from_object(&self, key: &str) -> Option<&JsonValue> {
+    pub fn get_from_object(&self, key: &str) -> Result<&JsonValue, ParsedJsonError> {
         if let JsonValue::Object(ref obj) = *self {
             for (k, v) in obj {
                 if k == key {
-                    return Some(v);
+                    return Ok(v);
                 }
             }
+            Err(ParsedJsonError::KeyNotFound(key.to_string()))
+        } else {
+            Err(ParsedJsonError::UnexpectedType)
         }
-        None
     }
 
-    pub fn index(&self, index: usize) -> Option<&JsonValue> {
-        if let JsonValue::Array(ref array) = *self {
-            return array.get(index);
+    pub fn len(&self) -> Result<usize, ParsedJsonError> {
+        match *self {
+            JsonValue::Object(ref obj) => Ok(obj.len()),
+            JsonValue::Array(ref arr) => Ok(arr.len()),
+            _ => Err(ParsedJsonError::InvalidMethodCall(format!(
+                "len can be only perfomed with array and object type"
+            ))),
         }
-        None
+    }
+
+    pub fn index(&self, index: usize) -> Result<&JsonValue, ParsedJsonError> {
+        if let JsonValue::Array(ref array) = *self {
+            return array
+                .get(index)
+                .ok_or(ParsedJsonError::IndexOutOfBounds(index));
+        }
+        Err(ParsedJsonError::UnexpectedType)
     }
 }
 
@@ -159,5 +179,11 @@ impl Parser {
             Some(Token::BeginArray) => self.parse_array(),
             ch => Err(ParserError::UnexpectedStart(ch.unwrap().clone())),
         }
+    }
+    pub fn parse_json(json: &str) -> Result<JsonValue, Box<dyn std::error::Error>> {
+        let mut lexer = Lexer::new(json);
+        let lex = lexer.lex()?;
+        let parserd_json = Parser::new(lex).parse()?;
+        Ok(parserd_json)
     }
 }

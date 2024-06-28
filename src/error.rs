@@ -37,9 +37,36 @@ impl fmt::Display for ParserError {
 impl Error for ParserError {}
 
 #[derive(Debug)]
+pub enum ParsedJsonError {
+    KeyNotFound(String),
+    IndexOutOfBounds(usize),
+    InvalidMethodCall(String),
+    UnexpectedType,
+}
+impl std::fmt::Display for ParsedJsonError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParsedJsonError::KeyNotFound(key) => {
+                write!(f, "Key '{}' not found in JSON object", key)
+            }
+            ParsedJsonError::IndexOutOfBounds(index) => {
+                write!(f, "Index {} is out of bounds in JSON array", index)
+            }
+            ParsedJsonError::InvalidMethodCall(err) => {
+                write!(f, "{}", err)
+            }
+            ParsedJsonError::UnexpectedType => write!(f, "Unexpected type in JSON value"),
+        }
+    }
+}
+
+impl std::error::Error for ParsedJsonError {}
+
+#[derive(Debug)]
 pub enum JsonError {
     LexerError(LexerError),
     ParserError(ParserError),
+    ParsedJsonError(ParsedJsonError),
 }
 
 impl fmt::Display for JsonError {
@@ -47,6 +74,7 @@ impl fmt::Display for JsonError {
         match *self {
             JsonError::LexerError(ref err) => write!(f, "Lexer Error: {:?}", err),
             JsonError::ParserError(ref err) => write!(f, "Parser Error: {:?}", err),
+            JsonError::ParsedJsonError(ref err) => write!(f, "Json Error: {:?}", err),
         }
     }
 }
@@ -55,6 +83,12 @@ impl Error for JsonError {}
 impl From<LexerError> for JsonError {
     fn from(err: LexerError) -> JsonError {
         JsonError::LexerError(err)
+    }
+}
+
+impl From<ParsedJsonError> for JsonError {
+    fn from(err: ParsedJsonError) -> JsonError {
+        JsonError::ParsedJsonError(err)
     }
 }
 
